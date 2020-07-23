@@ -1,0 +1,22 @@
+{
+  "name": "onvif-discovery",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "win": "nexe -i main.js -t windows-x64-12.9.1",
+    "linux": "nexe -i main.js -t linux-x64-12.9.1"
+  },
+  "keywords": [
+    "onvif",
+    "binary",
+    "cli"
+  ],
+  "author": "Andrey Polugodun",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.0",
+    "nexe": "^3.3.7",
+    "node-onvif-ts": "^0.1.6-1"
+  }
+}
