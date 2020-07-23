@@ -4,8 +4,8 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "win": "nexe -i main.js -t windows-x64-12.9.1 -o /build/win64",
-    "linux": "nexe -i main.js -t linux-x64-12.9.1 -o /build/linux64"
+    "win": "nexe -i main.js -t windows-x64-12.9.1 -o build/win64",
+    "linux": "nexe -i main.js -t linux-x64-12.9.1 -o build/linux64"
   },
   "keywords": [
     "onvif",

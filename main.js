@@ -26,7 +26,7 @@ async function scan() {
   }
 }
 
-scan()//.then(exitOnAnyKey)
+scan().then(exitOnAnyKey)
 
 /**
  * @param {number} spaces
