@@ -13,7 +13,7 @@ async function scan() {
       const device = new OnvifDeviceRacer({ xaddr })
       try {
         const { HardwareId } = await device.init()
-        console.log(green(prefix(3) + device.user + ' / ' + device.pass))
+        console.log(green(prefix(3) + `Auth: ${device.user} / ${device.pass}`))
         for (const { stream } of device.getProfileList()) {
           const streamurl = stream.rtsp || stream.udp
           console.log(prefix(3) + streamurl)
@@ -47,7 +47,7 @@ const authData = fs
 
 class OnvifDeviceRacer extends OnvifDevice {
   async init() {
-    const auth = await authData || [['admin', 'admin']]
+    const auth = (await authData) || [['admin', 'admin']]
     for (let i = 0; i < auth.length; ++i) {
       const [user, pass] = auth[i]
       this.setAuth(user, pass)

@@ -1,5 +1,5 @@
 ### ONVIF discovery
-Scan lan using broadcast and find onvif devices.
+Scan LAN and find onvif devices.
 Try grab meta by matching authorization.
 
 ### Example output
