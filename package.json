@@ -6,6 +6,7 @@
   "private": true,
   "scripts": {
     "win": "nexe -i main.js -t windows-x64-12.9.1 -o build/win64",
+    "mac": "nexe -i main.js -t mac-x64-12.9.1 -o build/macos",
     "linux": "nexe -i main.js -t linux-x64-12.9.1 -o build/linux64"
   },
   "keywords": [
@@ -18,6 +19,6 @@
   "dependencies": {
     "chalk": "^4.1.0",
     "nexe": "^3.3.7",
-    "node-onvif-ts": "^0.1.7"
+    "node-onvif-ts": "0.1.7"
   }
 }
