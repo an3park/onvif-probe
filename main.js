@@ -36,8 +36,8 @@ function prefix(spaces) {
 }
 
 const authData = fs
-  .readFile(path.join(__dirname, 'auth.cfg'), 'utf-8')
-  .then(file => file.split(/\n|\n\r/).map(line => line.split(':')))
+  .readFile('auth.cfg', 'utf-8')
+  .then((file) => file.split(/\n|\n\r/).map((line) => line.split(':')))
   .catch(() => {
     console.log(red('File `auth.cfg` not found or corrupted'))
     console.log(cyan('It need to match ONVIF auth'))
