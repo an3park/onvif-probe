@@ -7,7 +7,7 @@
   "license": "MIT",
   "dependencies": {
     "chalk": "^5.3.0",
-    "esbuild": "^0.19.12",
+    "esbuild": "^0.25.0",
     "node-onvif-ts": "0.1.7"
   }
 }
