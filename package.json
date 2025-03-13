@@ -1,13 +1,42 @@
 {
-  "name": "onvif-discovery",
-  "version": "1.0.3",
-  "description": "",
-  "main": "main.js",
-  "private": true,
+  "name": "onvif-probe",
+  "version": "1.0.4",
   "license": "MIT",
-  "dependencies": {
-    "chalk": "^5.3.0",
-    "esbuild": "^0.19.12",
-    "node-onvif-ts": "0.1.7"
+  "description": "Simple cli tool for onvif protocol discovery",
+  "author": "an3park",
+  "source": "src/index.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/an3park/onvif-probe.git"
+  },
+  "bin": {
+    "onvif-probe": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "build": "microbundle -f esm --target node --generateTypes false --sourcemap false"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/xml2js": "^0.4.14",
+    "microbundle": "^0.15.1",
+    "mri": "^1.2.0",
+    "picocolors": "^1.1.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "xml2js": "^0.6.2"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
