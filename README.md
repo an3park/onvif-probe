@@ -14,7 +14,7 @@ A tool to scan your local network and discover ONVIF-compliant devices (IP camer
 Requires Node.js 18 or higher.
 
 ```shell
-npx onvif-probe --login try:password --login another:credential
+npx onvif-probe@latest --login try:password --login another:credential
 ```
 
 ### Example output

@@ -1,8 +1,8 @@
 {
   "name": "onvif-probe",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "license": "MIT",
-  "description": "Simple cli tool for onvif protocol discovery",
+  "description": "Simple cli tool for onvif discovery",
   "author": "an3park",
   "source": "src/index.ts",
   "main": "dist/index.js",
@@ -11,8 +11,16 @@
     "type": "git",
     "url": "https://github.com/an3park/onvif-probe.git"
   },
+  "keywords": [
+    "onvif",
+    "camera",
+    "ip camera",
+    "onvif-probe",
+    "onvif-discovery",
+    "onvif-scanner"
+  ],
   "bin": {
-    "onvif-probe": "./dist/index.js"
+    "onvif-probe": "./index.js"
   },
   "exports": {
     ".": {
@@ -20,7 +28,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "index.js"
   ],
   "scripts": {
     "start": "tsx src/index.ts",
