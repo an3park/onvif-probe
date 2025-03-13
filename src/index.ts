@@ -1,6 +1,6 @@
 import mri from 'mri'
 import colors from 'picocolors'
-import { OnvifDevice, startProbe } from './node-onvif-ts'
+import { getCapabilities, getProfiles, getStreamUri, sendProbe } from './onvif-probe'
 
 const { blue, blueBright, cyan, green, greenBright, magenta, red, redBright, reset, yellow } =
   colors
@@ -46,42 +46,63 @@ if (argv.login) {
   }
 }
 
-async function main() {
-  const deviceInfoList = await startProbe()
-  // console.log(deviceInfoList)
-  for (const { xaddrs, urn, name } of deviceInfoList) {
-    console.log(`${name} (${urn})`)
-    for (const xaddr of xaddrs) {
-      console.log(prefix(1) + xaddr)
-      const device = new OnvifDevice({ xaddr })
-      try {
-        // try login with provided credentials
-        for (const [user, pass] of loginList) {
-          device.setAuth(user, pass)
-          try {
-            await device.init()
-            break
-          } catch (e: any) {
-            console.log(red(prefix(3) + (e.message || e)))
+const devices = await sendProbe()
+
+for (const { urn, xaddrs, scopes } of devices) {
+  const name = scopes
+    ?.find((s) => s.startsWith('onvif://www.onvif.org/name/'))
+    ?.split('/')
+    .pop()
+
+  console.log(`${name} (${urn})`)
+
+  for (const xaddr of xaddrs) {
+    console.log(prefix(1) + xaddr)
+    try {
+      // try login with provided credentials
+      for (const [user, pass] of loginList) {
+        const auth = { user, pass }
+        try {
+          const { Capabilities } = await getCapabilities(xaddr, auth)
+
+          console.log(green(prefix(3) + `Auth: ${user || '<empty>'}:${pass || '<empty>'}`))
+
+          if (Capabilities.Media) {
+            const { Profiles } = await getProfiles(Capabilities.Media.XAddr, auth)
+
+            const mediaUris: Set<string> = new Set()
+
+            for (const profile of Profiles) {
+              for (const protocol of ['RTSP', 'UDP', 'HTTP'] as const) {
+                try {
+                  const { MediaUri } = await getStreamUri(Capabilities.Media.XAddr, {
+                    ...auth,
+                    protocol,
+                    profileToken:
+                      profile.VideoEncoderConfiguration?.['@_token'] ||
+                      profile.VideoSourceConfiguration?.['@_token'],
+                  })
+
+                  mediaUris.add(MediaUri.Uri)
+                } catch (_) {}
+              }
+            }
+
+            for (const uri of mediaUris) {
+              console.log(prefix(5) + uri)
+            }
           }
+          break
+        } catch (e: any) {
+          console.log(red(prefix(3) + (e.message || e)))
         }
-
-        console.log(
-          green(prefix(3) + `Auth: ${device.user || '<empty>'}:${device.pass || '<empty>'}`)
-        )
-        for (const { stream } of device.getProfileList()) {
-          const streamurl = stream.rtsp || stream.udp
-          console.log(prefix(3) + streamurl)
-        }
-      } catch (e: any) {
-        console.log(red(prefix(3) + (e.message || e)))
       }
+    } catch (e: any) {
+      console.log(red(prefix(3) + (e.message || e)))
     }
-    console.log()
   }
+  console.log()
 }
-
-main().catch(console.error)
 
 function prefix(spaces: number) {
   return String.fromCharCode(...new Array(spaces).fill(32), 9492, 9472, 32)
