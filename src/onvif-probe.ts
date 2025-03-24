@@ -1,5 +1,5 @@
-import { createSocket } from 'node:dgram'
-import { createRequestSoap, parseXML, sendSoapRequest, SoapResponse } from './soap'
+import dgram from 'node:dgram'
+import * as soap from './soap'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -31,29 +31,31 @@ export interface OnvifDevice {
   types?: string[]
 }
 
-export async function sendProbe() {
-  const probeTemplate = `<?xml version="1.0" encoding="UTF-8"?><s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</a:Action><a:MessageID>uuid:__uuid__</a:MessageID><a:ReplyTo><a:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</a:Address></a:ReplyTo><a:To s:mustUnderstand="1">urn:schemas-xmlsoap-org:ws:2005:04:discovery</a:To></s:Header><s:Body><Probe xmlns="http://schemas.xmlsoap.org/ws/2005/04/discovery"><d:Types xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery" xmlns:dp0="http://www.onvif.org/ver10/network/wsdl">dp0:__type__</d:Types></Probe></s:Body></s:Envelope>`
+export function sendProbe(onDevice: (device: OnvifDevice) => void) {
+  const probeTemplate = (type: string, uuid: string) =>
+    `<?xml version="1.0" encoding="UTF-8"?><s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"><s:Header><a:Action s:mustUnderstand="1">http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</a:Action><a:MessageID>uuid:${uuid}</a:MessageID><a:ReplyTo><a:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</a:Address></a:ReplyTo><a:To s:mustUnderstand="1">urn:schemas-xmlsoap-org:ws:2005:04:discovery</a:To></s:Header><s:Body><Probe xmlns="http://schemas.xmlsoap.org/ws/2005/04/discovery"><d:Types xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery" xmlns:dp0="http://www.onvif.org/ver10/network/wsdl">dp0:${type}</d:Types></Probe></s:Body></s:Envelope>`
 
   const soapSet = ['NetworkVideoTransmitter', 'Device', 'NetworkVideoDisplay'].map((type) => {
-    return probeTemplate.replace('__type__', type).replace('__uuid__', createUuidV4())
+    return probeTemplate(type, createUuidV4())
   })
 
-  const soapList: string[] = []
-  Array(DISCOVERY_RETRY_MAX)
-    .fill(0)
-    .forEach(() => {
-      soapSet.forEach((s) => {
-        soapList.push(s)
-      })
-    })
+  const udp = dgram.createSocket('udp4')
 
-  const udp = createSocket('udp4')
+  const sendSoap = async () => {
+    for (let i = 0; i < DISCOVERY_RETRY_MAX; i++) {
+      for (const soap of soapSet) {
+        const buf = Buffer.from(soap, 'utf8')
+        udp.send(buf, 0, buf.length, PORT, MULTICAST_ADDRESS)
+        await sleep(DISCOVERY_INTERVAL)
+      }
+    }
+  }
 
-  const devices: Record<string, OnvifDevice> = {}
+  sendSoap()
 
   udp.on('message', (buf) => {
     try {
-      const xml = parseXML<SoapResponse<ProbeMatches>>(buf.toString())
+      const xml = soap.parseXML<soap.SoapResponse<ProbeMatches>>(buf.toString())
 
       const { ProbeMatch } = xml.Envelope.Body.ProbeMatches
 
@@ -63,21 +65,12 @@ export async function sendProbe() {
         scopes: ProbeMatch.Scopes?.split(/\s+/),
         types: ProbeMatch.Types?.split(/\s+/),
       }
-
-      devices[device.urn] = Object.assign(devices[device.urn] || {}, device)
+      // devices[device.urn] = Object.assign(devices[device.urn] || {}, device)
+      onDevice(device)
     } catch (_) {}
   })
 
-  for (const soap of soapList) {
-    const buf = Buffer.from(soap, 'utf8')
-    udp.send(buf, 0, buf.length, PORT, MULTICAST_ADDRESS)
-    await sleep(DISCOVERY_INTERVAL)
-  }
-  await sleep(DISCOVERY_WAIT)
-
-  udp.close()
-
-  return Object.values(devices)
+  return udp
 }
 
 interface GetCapabilitiesResponse {
@@ -96,9 +89,9 @@ export async function getCapabilities(
   url: string,
   { user, pass }: { user?: string; pass?: string }
 ) {
-  const capabilities = await sendSoapRequest<GetCapabilitiesResponse>(
+  const capabilities = await soap.sendSoapRequest<GetCapabilitiesResponse>(
     url,
-    createRequestSoap({
+    soap.createRequestSoap({
       body: `<tds:GetCapabilities><tds:Category>All</tds:Category></tds:GetCapabilities></s:Body>`,
       xmlns: [
         'xmlns:tds="http://www.onvif.org/ver10/device/wsdl"',
@@ -157,9 +150,9 @@ interface GetProfilesResponse {
 }
 
 export async function getProfiles(url: string, { user, pass }: { user?: string; pass?: string }) {
-  const profiles = await sendSoapRequest<GetProfilesResponse>(
+  const profiles = await soap.sendSoapRequest<GetProfilesResponse>(
     url,
-    createRequestSoap({
+    soap.createRequestSoap({
       body: '<trt:GetProfiles/>',
       xmlns: [
         'xmlns:trt="http://www.onvif.org/ver10/media/wsdl"',
@@ -203,9 +196,9 @@ export async function getStreamUri(
   soapBody += '<trt:ProfileToken>' + profileToken + '</trt:ProfileToken>'
   soapBody += '</trt:GetStreamUri>'
 
-  const streamUri = await sendSoapRequest<GetStreamUriResponse>(
+  const streamUri = await soap.sendSoapRequest<GetStreamUriResponse>(
     url,
-    createRequestSoap({
+    soap.createRequestSoap({
       body: soapBody,
       xmlns: [
         'xmlns:trt="http://www.onvif.org/ver10/media/wsdl"',

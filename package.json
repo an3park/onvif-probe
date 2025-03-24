@@ -1,6 +1,6 @@
 {
   "name": "onvif-probe",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "MIT",
   "description": "Simple cli tool for onvif discovery",
   "author": "an3park",

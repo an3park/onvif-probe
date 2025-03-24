@@ -14,7 +14,6 @@ const argv = mri<{
   boolean: ['help', 'overwrite'],
   string: ['login'],
 })
-// const cwd = process.cwd()
 
 // prettier-ignore
 const helpMessage = `\
@@ -46,18 +45,42 @@ if (argv.login) {
   }
 }
 
-const devices = await sendProbe()
+interface DeviceData {
+  urn: string
+  name: string
+  xaddrs: Record<
+    string,
+    {
+      scopes: string[]
+      auth: { user: string; pass: string }
+      streams: string[]
+    }
+  >
+}
 
-for (const { urn, xaddrs, scopes } of devices) {
+const devicesData: Record<string, DeviceData> = {}
+
+const udp = sendProbe(async (device) => {
+  const { urn, xaddrs, scopes } = device
+
+  if (devicesData[urn]) {
+    return
+  }
+
   const name = scopes
     ?.find((s) => s.startsWith('onvif://www.onvif.org/name/'))
     ?.split('/')
     .pop()
 
-  console.log(`${name} (${urn})`)
+  const deviceData: DeviceData = {
+    urn,
+    name: name || '',
+    xaddrs: {},
+  }
+
+  devicesData[urn] = Object.assign(devicesData[urn] || {}, deviceData)
 
   for (const xaddr of xaddrs) {
-    console.log(prefix(1) + xaddr)
     try {
       // try login with provided credentials
       for (const [user, pass] of loginList) {
@@ -65,7 +88,11 @@ for (const { urn, xaddrs, scopes } of devices) {
         try {
           const { Capabilities } = await getCapabilities(xaddr, auth)
 
-          console.log(green(prefix(3) + `Auth: ${user || '<empty>'}:${pass || '<empty>'}`))
+          devicesData[urn].xaddrs[xaddr] = {
+            scopes: scopes || [],
+            auth,
+            streams: [],
+          }
 
           if (Capabilities.Media) {
             const { Profiles } = await getProfiles(Capabilities.Media.XAddr, auth)
@@ -88,9 +115,7 @@ for (const { urn, xaddrs, scopes } of devices) {
               }
             }
 
-            for (const uri of mediaUris) {
-              console.log(prefix(5) + uri)
-            }
+            devicesData[urn].xaddrs[xaddr].streams = Array.from(mediaUris)
           }
           break
         } catch (e: any) {
@@ -101,8 +126,25 @@ for (const { urn, xaddrs, scopes } of devices) {
       console.log(red(prefix(3) + (e.message || e)))
     }
   }
-  console.log()
-}
+
+  console.log(`${devicesData[urn].name} (${devicesData[urn].urn})`)
+
+  for (const xaddr of Object.keys(devicesData[urn].xaddrs)) {
+    console.log(prefix(1) + xaddr)
+
+    const { user, pass } = devicesData[urn].xaddrs[xaddr].auth
+
+    console.log(green(prefix(3) + `Auth: ${user || '<empty>'}:${pass || '<empty>'}`))
+
+    for (const stream of devicesData[urn].xaddrs[xaddr].streams) {
+      console.log(blueBright(prefix(5) + stream))
+    }
+  }
+})
+
+setTimeout(() => {
+  udp.close()
+}, 10_000)
 
 function prefix(spaces: number) {
   return String.fromCharCode(...new Array(spaces).fill(32), 9492, 9472, 32)
